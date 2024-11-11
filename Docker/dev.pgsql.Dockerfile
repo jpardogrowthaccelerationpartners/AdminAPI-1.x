@@ -32,7 +32,7 @@ ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_HTTP_PORTS=80
 
 COPY --chmod=500 Settings/dev/pgsql/run.sh /app/run.sh
-COPY Settings/dev/log4net.config /app/log4net.txt
+COPY Docker/Settings/dev/log4net.config /app/log4net.txt
 
 WORKDIR /app
 COPY --from=publish /app/EdFi.Ods.AdminApi .
