@@ -68,19 +68,20 @@ jobs:
           cd $folder
           dockerfile=$(echo ${{matrix.dockerfile.path}} | awk -F"/" '{print $NF}')
 
-          docker build -f $dockerfile -t jpdga/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} --build-arg="VERSION=${{ env.IMAGE_TAG }}" .
+          docker build -f $dockerfile -t ${{ matrix.dockerfile.name }} --build-arg="VERSION=${{ env.IMAGE_TAG }}" .
 
       - name: Analyze
         uses: docker/scout-action@67eb1afe777307506aaecb9acd9a0e0389cb99ae # v1.5.0
         with:
           command: cves
-          image: local://jpdga/${{ env.IMAGE_NAME }}
-          sarif-file: sarif-jpdga/${{ env.IMAGE_NAME }}.output.json
+          image: local://${{ matrix.dockerfile.name }}
+          sarif-file: sarif-${{ matrix.dockerfile.name }}.output.json
           summary: true
 
       - name: Push admin console image
         run: |
-          docker push jpdga/${{ env.IMAGE_NAME }} --all-tags
+          docker image tag ${{ matrix.dockerfile.name }} jpdga/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          docker push jpdga/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           
       - name: Upload SARIF result
         id: upload-sarif
