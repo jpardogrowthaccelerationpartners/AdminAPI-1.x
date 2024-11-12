@@ -74,8 +74,8 @@ jobs:
         uses: docker/scout-action@67eb1afe777307506aaecb9acd9a0e0389cb99ae # v1.5.0
         with:
           command: cves
-          image: local://jpdga/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          sarif-file: sarif-jpdga/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}.output.json
+          image: local://jpdga/${{ env.IMAGE_NAME }}
+          sarif-file: sarif-jpdga/${{ env.IMAGE_NAME }}.output.json
           summary: true
 
       - name: Push admin console image
