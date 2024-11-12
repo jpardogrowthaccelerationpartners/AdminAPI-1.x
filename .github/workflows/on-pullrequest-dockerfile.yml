@@ -61,14 +61,14 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_HUB_TOKEN }}
 
-      #- name: Build
-      #  run: |
-      #    path=${{matrix.dockerfile.path}}
-      #    folder=${path%/*}
-      #    cd $folder
-      #    dockerfile=$(echo ${{matrix.dockerfile.path}} | awk -F"/" '{print $NF}')
+      - name: Build
+        run: |
+          path=${{matrix.dockerfile.path}}
+          folder=${path%/*}
+          cd $folder
+          dockerfile=$(echo ${{matrix.dockerfile.path}} | awk -F"/" '{print $NF}')
 
-      #    docker build -f $dockerfile -t ${{ matrix.dockerfile.name }} --build-arg="VERSION=${{ env.IMAGE_TAG }}" .
+          docker build -f $dockerfile -t ${{ matrix.dockerfile.name }} --build-arg="VERSION=${{ env.IMAGE_TAG }}" .
 
      # - name: Analyze
      #   uses: docker/scout-action@67eb1afe777307506aaecb9acd9a0e0389cb99ae # v1.5.0
@@ -78,13 +78,9 @@ jobs:
      #     sarif-file: sarif-${{ matrix.dockerfile.name }}.output.json
      #     summary: true
 
-      - name: Build and push admin console image
-        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09  # v5.0.0
-        with:
-          context: .
-          file: dev.pgsql.Dockerfile
-          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          push: true
+      - name: Push admin console image
+        run: |
+          docker image push jpdga/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           
       - name: Upload SARIF result
         id: upload-sarif
