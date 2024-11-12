@@ -70,13 +70,13 @@ jobs:
 
           docker build -f $dockerfile -t jpdga/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} --build-arg="VERSION=${{ env.IMAGE_TAG }}" .
 
-     # - name: Analyze
-     #   uses: docker/scout-action@67eb1afe777307506aaecb9acd9a0e0389cb99ae # v1.5.0
-     #   with:
-     #     command: cves
-     #     image: local://${{ matrix.dockerfile.name }}
-     #     sarif-file: sarif-${{ matrix.dockerfile.name }}.output.json
-     #     summary: true
+      - name: Analyze
+        uses: docker/scout-action@67eb1afe777307506aaecb9acd9a0e0389cb99ae # v1.5.0
+        with:
+          command: cves
+          image: local://${{ matrix.dockerfile.name }}
+          sarif-file: sarif-${{ matrix.dockerfile.name }}.output.json
+          summary: true
 
       - name: Push admin console image
         run: |
