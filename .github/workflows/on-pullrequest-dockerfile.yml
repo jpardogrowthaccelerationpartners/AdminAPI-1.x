@@ -80,7 +80,8 @@ jobs:
 
       - name: Push admin console image
         run: |
-          docker image push jpdga/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          docker image tag ${{ matrix.dockerfile.name }} jpdga/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          docker image push ${{ matrix.dockerfile.name }}
           
       - name: Upload SARIF result
         id: upload-sarif
