@@ -8,17 +8,17 @@ name: On Pull Request - Dockerfile - Admin Console
 on:
   push:
     branches:
-      - adminapi23-rc.0
+      - adminapi23-rc.*
   pull_request:
     branches:
-      - adminapi23-rc.0
+      - adminapi23-rc.*
   workflow_dispatch:
 
 env:
   DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
   DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
   IMAGE_NAME: ${{ vars.IMAGE_NAME }}
-  IMAGE_TAG: pre-alpha
+  IMAGE_TAG: ${{ github.ref_name }}
 
 permissions: read-all
 
