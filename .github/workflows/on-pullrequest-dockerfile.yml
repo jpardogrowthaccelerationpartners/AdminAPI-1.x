@@ -40,11 +40,11 @@ jobs:
     steps:
       - name: Get tag name
         run: |
-          echo "BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
-
-      - name: Base tag name
-        run: |
-          echo "TEST=${{ github.event.pull_request.merged_at }}"
+          echo if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BRANCH_NAME=${{ github.event.pull_request.base.ref }}
+          else
+            BRANCH_NAME=${{ github.ref#refs/heads/ }}
+          fi
 
       # - name: Copy application folder to docker context
       #   if: ${{ matrix.dockerfile.type == 'local' }}
