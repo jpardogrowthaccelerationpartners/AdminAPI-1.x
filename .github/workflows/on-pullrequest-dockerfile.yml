@@ -44,7 +44,7 @@ jobs:
 
       - name: Base tag name
         run: |
-          echo "TEST=${{ github.repository }}"
+          echo "TEST=${{ github.ref }}"
 
       # - name: Copy application folder to docker context
       #   if: ${{ matrix.dockerfile.type == 'local' }}
