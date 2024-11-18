@@ -44,7 +44,7 @@ jobs:
 
       - name: Base tag name
         run: |
-          echo "BAseTag:${{ github.event.pull_request.base.ref}}"
+          echo "REF=${{ github.event.pull_request.base.ref}}"
 
       # - name: Copy application folder to docker context
       #   if: ${{ matrix.dockerfile.type == 'local' }}
