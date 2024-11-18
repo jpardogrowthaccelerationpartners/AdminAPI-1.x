@@ -38,11 +38,9 @@ jobs:
             { name: "development", path: "Docker/dev.pgsql.Dockerfile", type: "local" }
           ]
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-
       - name: Get tag name
         run: |
-          echo "REF=${{ github.event.pull_request && github.head_ref || github.ref_name }}"
+          echo ${{ github.event.pull_request.head.ref }}
 
       - name: Base tag name
         run: |
