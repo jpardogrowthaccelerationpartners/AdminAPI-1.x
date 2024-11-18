@@ -40,7 +40,7 @@ jobs:
     steps:
       - name: Get tag name
         run: |
-          echo "BRANCH=${{ github.base_ref	 }}" >> $GITHUB_ENV
+          echo "BRANCH=${{ github.base_ref.pull_request_target }}" >> $GITHUB_ENV
 
       - name: Base tag name
         run: |
