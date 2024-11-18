@@ -18,7 +18,7 @@ env:
   DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
   DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
   IMAGE_NAME: ${{ vars.IMAGE_NAME }}
-  IMAGE_TAG: ${{ github.base_ref || github.ref_name  }}
+  IMAGE_TAG: ${{ github.ref_name }}
 
 permissions: read-all
 
@@ -40,11 +40,11 @@ jobs:
     steps:
       - name: Get tag name
         run: |
-          echo ${{ github.event.pull_request.head.ref }}
+          echo "BRANCH=${{ github.base_ref	 }}" >> $GITHUB_ENV
 
       - name: Base tag name
         run: |
-          echo "REF=${{ env.IMAGE_TAG }}"
+          echo $(echo $GITHUB_ENV)
 
       # - name: Copy application folder to docker context
       #   if: ${{ matrix.dockerfile.type == 'local' }}
