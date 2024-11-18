@@ -40,11 +40,11 @@ jobs:
     steps:
       - name: Get tag name
         run: |
-          echo "REF=${{ github.event.pull_request  }}"
+          echo "REF=${{ github.event.pull_request && github.head_ref || github.ref_name }}"
 
       - name: Base tag name
         run: |
-          echo "BAse Tag:${{ github.head_ref }}"
+          echo "BAseTag:${{ github.event.pull_request && github.head_ref }}"
 
       # - name: Copy application folder to docker context
       #   if: ${{ matrix.dockerfile.type == 'local' }}
