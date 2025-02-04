@@ -76,7 +76,7 @@ jobs:
 
       - name: Perform CodeQL Analysis
         if: success()
-        uses: github/codeql-action/analyze@3096afedf9873361b2b2f65e1445b13272c83eb8 # codeql-bundle-v2.20.0
+        uses: github/codeql-action/analyze@cf7e9f23492505046de9a37830c3711dd0f25bb3 # codeql-bundle-v2.16.2
 
   event_file:
     name: "Event File"
