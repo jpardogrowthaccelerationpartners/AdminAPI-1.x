@@ -295,7 +295,7 @@ jobs:
           images: ${{ env.IMAGE_NAME }}
 
       - name: Build and push admin api image
-        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671  # v4.0.0
+        uses: docker/build-push-action@b32b51a8eda65d6793cd0494a773d4f6bcef32dc  # v6.11.0
         with:
           context: "{{defaultContext}}:Docker"
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:pre-1.3
@@ -313,7 +313,7 @@ jobs:
           images: ${{ env.DATABASE_IMAGE_NAME }}
 
       - name: Build and push admin api database image
-        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671  # v4.0.0
+        uses: docker/build-push-action@b32b51a8eda65d6793cd0494a773d4f6bcef32dc  # v6.11.0
         with:
           context: "{{defaultContext}}:Docker/Settings/DB-Admin/pgsql"
           cache-from: type=registry,ref=${{ env.DATABASE_IMAGE_NAME }}:pre-1.3
