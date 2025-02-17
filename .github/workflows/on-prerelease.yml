@@ -5,15 +5,14 @@
 
 name: On Pre-Release
 on:
-  workflow_dispatch:
   release:
     types:
       - prereleased
 
 env:
   ARTIFACTS_API_KEY: ${{ secrets.AZURE_ARTIFACTS_PERSONAL_ACCESS_TOKEN }}
-  ARTIFACTS_FEED_URL: "https://pkgs.dev.azure.com/ed-fi-alliance/Ed-Fi-Alliance-OSS/_packaging/EdFi/nuget/v3/index.json"
-  VSS_NUGET_EXTERNAL_FEED_ENDPOINTS: '{"endpointCredentials": [{"endpoint": "https://pkgs.dev.azure.com/ed-fi-alliance/Ed-Fi-Alliance-OSS/_packaging/EdFi/nuget/v3/index.json","password": "${{ secrets.AZURE_ARTIFACTS_PERSONAL_ACCESS_TOKEN }}"}]}'
+  ARTIFACTS_FEED_URL: ${{ vars.AZURE_ARTIFACTS_FEED_URL }}
+  VSS_NUGET_EXTERNAL_FEED_ENDPOINTS: '{"endpointCredentials": [{"endpoint": "${{ vars.AZURE_ARTIFACTS_FEED_URL }}","password": "${{ secrets.AZURE_ARTIFACTS_PERSONAL_ACCESS_TOKEN }}"}]}'
   MANIFEST_FILE: "_manifest/spdx_2.2/manifest.spdx.json"
   PACKAGE_NAME: "AdminApi"
   IMAGE_NAME: ${{ vars.IMAGE_NAME }}
@@ -65,7 +64,7 @@ jobs:
               -APIVersion $apiVersion
 
       - name: Setup Nuget.exe
-        uses: nuget/setup-nuget@a21f25cd3998bf370fde17e3f1b4c12c175172f9 #v2.0.0
+        uses: nuget/setup-nuget@323ab0502cd38fdc493335025a96c8fdb0edc71f #v2.0.1
 
       - name: Create NuGet Packages
         if: success()
@@ -78,5 +77,247 @@ jobs:
               -APIVersion  $apiVersion `
               -Configuration Release
 
+      - name: Generate hash for NuGet package
+        id: hash-code
+        shell: bash
+        run: |
+          echo "hash-code=$(sha256sum *.nupkg | base64 -w0)" >> $GITHUB_OUTPUT
 
+      - name: Upload Packages as Artifacts
+        if: success()
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        with:
+          name: "${{ env.PACKAGE_NAME }}-NuGet"
+          path: ./*.nupkg
+          if-no-files-found: error
+          retention-days: 30
 
+  sbom-create:
+    name: Create SBOM
+    runs-on: ubuntu-latest
+    needs: pack
+    permissions:
+      actions: write
+    outputs:
+      sbom-hash-code: ${{ steps.sbom-hash-code.outputs.sbom-hash-code }}
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - name: Get Artifacts
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 #v4.1.8
+        with:
+          name: ${{ env.PACKAGE_NAME }}-NuGet
+
+      - name: Generate Software Bill of Materials (SBOM) - API
+        shell: pwsh
+        run: |
+          $packageName = "${{ env.PACKAGE_NAME }}"
+          $version = "${{ needs.pack.outputs.admin-api-version }}"
+
+          Get-ChildItem -Include "EdFi.Suite3.ODS.$packageName.*.nupkg" -Recurse | ForEach-Object { $_.FullName } > buildfilelist.txt
+
+          dotnet tool install --global Microsoft.Sbom.DotNetTool
+
+          sbom-tool generate `
+              -b ./ `
+              -bl ./buildfilelist.txt `
+              -bc "./Application/EdFi.Ods.$packageName" `
+              -pn "EdFi.Suite3.ODS.$packageName" `
+              -pv $version `
+              -nsb https://ed-fi.org `
+              -m ./ `
+              -ps "Ed-Fi Alliance"
+
+          cp _manifest/spdx_2.2/manifest.spdx.* .
+
+      - name: Upload SBOM
+        if: success()
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        with:
+          name: ${{ env.PACKAGE_NAME }}-SBOM
+          path: ${{ env.MANIFEST_FILE }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Generate hash code for SBOM
+        id: sbom-hash-code
+        shell: bash
+        run: |
+          # sha256sum returns "<hashcode>  <name of file". Split that and return only the <hashcode>.
+          sbom_hash=$(sha256sum ./${{ env.MANIFEST_FILE }} | awk '{split($0,a); print a[1]}')
+          echo "sbom-hash-code=$sbom_hash" >> $GITHUB_OUTPUT
+
+  sbom-attach:
+    name: Attach SBOM file
+    runs-on: ubuntu-latest
+    needs:
+      - sbom-create
+      - pack
+    permissions:
+      actions: write
+    steps:
+      - name: Download the SBOM
+        uses: Ed-Fi-Alliance-OSS/slsa-github-generator/.github/actions/secure-download-artifact@main
+        with:
+          name: "${{ env.PACKAGE_NAME }}-SBOM"
+          path: ${{ env.MANIFEST_FILE }}
+          sha256: "${{ needs.sbom-create.outputs.sbom-hash-code }}"
+
+      - name: Attach to release
+        shell: pwsh
+        run: |
+          $release = "${{ github.ref_name }}"
+          $repo = "${{ github.repository }}"
+          $token = "${{ secrets.GITHUB_TOKEN }}"
+          $file = "${{ env.MANIFEST_FILE }}"
+          $uploadName = "${{ env.PACKAGE_NAME }}-SBOM.zip"
+
+          $url = "https://api.github.com/repos/$repo/releases/tags/$release"
+
+          $gh_headers = @{
+              "Accept"        = "application/vnd.github+json"
+              "Authorization" = "Bearer $token"
+          }
+
+          $response = Invoke-RestMethod -Uri $url -Headers $gh_headers
+          $releaseId = $response.id
+
+          $url = "https://uploads.github.com/repos/$repo/releases/$releaseId/assets"
+
+          Compress-Archive $file -DestinationPath $uploadName
+
+          $gh_headers["Content-Type"] = "application/octet"
+          Invoke-RestMethod -Method POST `
+              -Uri "$($url)?name=$($uploadName)" `
+              -Headers $gh_headers `
+              -InFile $uploadName
+
+  provenance-create:
+    name: Create Provenance
+    needs: pack
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    uses: Ed-Fi-Alliance-OSS/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+    with:
+      base64-subjects: ${{ needs.pack.outputs.hash-code }}
+      provenance-name: AdminApi.intoto.jsonl
+      upload-assets: true
+      # TODO: remove this after this issue is resolved: https://github.com/slsa-framework/slsa-github-generator/issues/876
+      compile-generator: true
+
+  publish-package:
+    name: Publish NuGet Package
+    needs: pack
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - name: Get Artifact
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 #v4.1.8
+        with:
+          name: ${{ env.PACKAGE_NAME }}-NuGet
+
+      - name: Install-credential-handler
+        run: iex "& { $(irm https://aka.ms/install-artifacts-credprovider.ps1) } -AddNetfx"
+
+      - name: Push Package to Azure Artifacts
+        run: |
+          $artifact = (Get-ChildItem -Path $_ -Name -Include *.nupkg)
+          $arguments = @{
+            NuGetApiKey = "${{ env.ARTIFACTS_API_KEY }}"
+          }
+
+          $artifact | ForEach-Object {
+              $arguments.PackageFile = $_
+              ./build.ps1 Push @arguments
+           }
+
+  docker-publish:
+    name: Publish to Docker Hub
+    runs-on: ubuntu-latest
+    needs:
+      - publish-package
+    steps:
+      - name: Wait 20s
+        # Give Azure Artifacts caching a moment to catch up
+        run: sleep 20
+
+      - name: Prepare Tags
+        id: prepare-tags
+        run: |
+          REF="${{ env.REF }}"
+          if [[ $REF =~ "Pre-Release" ]]
+          then
+             # Remove Pre-Release prefix
+             PREFIX="Pre-Release-"
+             PACKAGEVERSION=${REF#"$PREFIX"}
+          else
+             PACKAGEVERSION=${REF}
+          fi
+
+          if [[ $PACKAGEVERSION =~ "alpha" ]]
+          then
+            # Pre-releases get the tag "pre"
+            APITAGS="${{ env.IMAGE_NAME }}:pre"
+            DBTAGS="${{ env.DATABASE_IMAGE_NAME }}:pre"
+          else
+            # Releases get the version, plus shortened form for minor release.
+            # We are not using shortened form for major or using "latest"
+            # because they are too imprecise.
+            MINOR=`echo ${PACKAGEVERSION} | awk -F"." '{print $1"."$2}'`
+            APITAGS="${{ env.IMAGE_NAME }}:${PACKAGEVERSION},${{ env.IMAGE_NAME }}:${MINOR}"
+            DBTAGS="${{ env.DATABASE_IMAGE_NAME }}:${PACKAGEVERSION},${{ env.DATABASE_IMAGE_NAME }}:${MINOR}"
+          fi
+
+          SEMVERSION=${PACKAGEVERSION:1}  # strip off the leading 'v'
+          echo "APITAGS=$APITAGS" >> $GITHUB_OUTPUT
+          echo "DBTAGS=$DBTAGS" >> $GITHUB_OUTPUT
+          echo "VERSION=$SEMVERSION" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5  # v3.8.0
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567  # v3.3.0
+        with:
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_HUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for admin api image
+        id: metaapi
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96  # v5.6.1
+        with:
+          images: ${{ env.IMAGE_NAME }}
+
+      - name: Build and push admin api image
+        uses: docker/build-push-action@b32b51a8eda65d6793cd0494a773d4f6bcef32dc  # v6.11.0
+        with:
+          context: "{{defaultContext}}:Docker"
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:pre
+          cache-to: type=inline
+          build-args: VERSION=${{ steps.prepare-tags.outputs.VERSION }}
+          file: api.pgsql.Dockerfile
+          tags: ${{ steps.prepare-tags.outputs.APITAGS }}
+          labels: ${{ steps.metaapi.outputs.labels }}
+          push: true
+
+      - name: Extract metadata (tags, labels) for admin api database image
+        id: metadatabase
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96  # v5.6.1
+        with:
+          images: ${{ env.DATABASE_IMAGE_NAME }}
+
+      - name: Build and push admin api database image
+        uses: docker/build-push-action@b32b51a8eda65d6793cd0494a773d4f6bcef32dc  # v6.11.0
+        with:
+          context: "{{defaultContext}}:Docker/Settings/DB-Admin/pgsql"
+          cache-from: type=registry,ref=${{ env.DATABASE_IMAGE_NAME }}:pre
+          cache-to: type=inline
+          build-args: VERSION=${{ steps.prepare-tags.outputs.VERSION }}
+          file: Dockerfile
+          tags: ${{ steps.prepare-tags.outputs.DBTAGS }}
+          labels: ${{ steps.metadatabase.outputs.labels }}
+          push: true
