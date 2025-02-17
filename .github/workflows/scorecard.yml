@@ -4,8 +4,6 @@ name: Scorecard supply-chain security
 on:
   # To guarantee Maintained check is occasionally updated. See
   # https://github.com/ossf/scorecard/blob/main/docs/checks.md#maintained
-  schedule:
-    - cron: '15 23 * * 0'
   push:
     branches: [ "main" ]
   workflow_dispatch:
