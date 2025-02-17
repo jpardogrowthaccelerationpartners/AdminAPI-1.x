@@ -5,6 +5,7 @@
 
 name: After Pull Request
 on:
+  workflow_dispatch:
   workflow_run:
     workflows:
       - "On Pull Request"
@@ -20,7 +21,7 @@ jobs:
     if: github.event.workflow_run.conclusion != 'skipped'
 
     permissions:
-      checks: write
+      actions: write
       pull-requests: write
       # actions: read
       # only needed for private repository
