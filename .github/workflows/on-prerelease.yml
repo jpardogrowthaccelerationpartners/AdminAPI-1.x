@@ -97,8 +97,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: pack
     permissions:
-      actions: read
-      contents: write
+      actions: write
     outputs:
       sbom-hash-code: ${{ steps.sbom-hash-code.outputs.sbom-hash-code }}
     steps:
@@ -154,8 +153,7 @@ jobs:
       - sbom-create
       - pack
     permissions:
-      actions: read
-      contents: write
+      actions: write
     steps:
       - name: Download the SBOM
         uses: Ed-Fi-Alliance-OSS/slsa-github-generator/.github/actions/secure-download-artifact@main
@@ -197,9 +195,8 @@ jobs:
     name: Create Provenance
     needs: pack
     permissions:
-      actions: read
+      actions: write
       id-token: write
-      contents: write
     uses: Ed-Fi-Alliance-OSS/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
     with:
       base64-subjects: ${{ needs.pack.outputs.hash-code }}
