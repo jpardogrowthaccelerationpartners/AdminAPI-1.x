@@ -200,7 +200,7 @@ jobs:
       checks: read
       contents: read
       deployments: none
-      id-token: none
+      id-token: write
       issues: none
       discussions: none
       packages: none
