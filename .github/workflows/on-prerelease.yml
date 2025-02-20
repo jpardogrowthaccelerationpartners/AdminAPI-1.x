@@ -154,7 +154,8 @@ jobs:
       - sbom-create
       - pack
     permissions:
-      actions: write
+      actions: read
+      contents: write
     steps:
       - name: Download the SBOM
         uses: Ed-Fi-Alliance-OSS/slsa-github-generator/.github/actions/secure-download-artifact@main
@@ -197,18 +198,7 @@ jobs:
     needs: pack
     permissions:
       actions: read
-      checks: read
       contents: write
-      deployments: none
-      id-token: write
-      issues: none
-      discussions: none
-      packages: none
-      pages: none
-      pull-requests: none
-      repository-projects: none
-      security-events: none
-      statuses: none
     uses: Ed-Fi-Alliance-OSS/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
     with:
       base64-subjects: ${{ needs.pack.outputs.hash-code }}
