@@ -10,6 +10,7 @@ on:
       - "On Pull Request"
     types:
       - completed
+  workflow_dispatch:
 
 permissions: read-all
 
