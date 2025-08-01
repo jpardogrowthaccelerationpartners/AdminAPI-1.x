@@ -64,8 +64,16 @@ jobs:
         with:
           node-version: "16"
 
-      - name: Install Newman and dependencies
-        run: cd "E2E Tests" && npm install
+      - name: Install Newman and dependencies globally
+        run: |
+          npm install -g newman@6.1.3
+          npm install -g newman-reporter-htmlextra@1.23.1
+          npm install -g postman-combine-collections@1.1.2
+
+      - name: Verify installations
+        run: |
+          newman --version
+          npm list -g newman-reporter-htmlextra
 
       - name: Combine Collections
         run: |
