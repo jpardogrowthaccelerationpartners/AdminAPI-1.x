@@ -64,8 +64,8 @@ jobs:
         with:
           node-version: "16"
 
-      - name: Install Tools
-        run: npm install -g newman newman-reporter-htmlextra postman-combine-collections@1.1.2
+      - name: Install Newman and dependencies
+        run: cd "E2E Tests" && npm install
 
       - name: Combine Collections
         run: |
